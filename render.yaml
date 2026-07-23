@@ -15,10 +15,10 @@ services:
       mountPath: /opt/database
       sizeGB: 1
 
-staticSites:
-  - name: vidgrab-frontend
+  - type: static
+    name: vidgrab-frontend
     buildCommand: npm install && npm run build
-    staticPublishPath: dist
+    staticPublishPath: ./dist
     envVars:
       - key: VITE_API_BASE_URL
         value: https://vidgrab-backend.onrender.com
