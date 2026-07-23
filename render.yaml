@@ -15,8 +15,9 @@ services:
       mountPath: /opt/database
       sizeGB: 1
 
-staticSites:
-  - name: vidgrab-frontend
+  - type: web
+    name: vidgrab-frontend
+    env: static
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     envVars:
