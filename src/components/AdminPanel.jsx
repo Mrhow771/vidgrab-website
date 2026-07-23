@@ -61,14 +61,14 @@ export default function AdminPanel() {
             onChange={(e) => setPassword(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
-                if (password === 'mrhow786') setIsAuthenticated(true);
+                if (password === 'Maharg786') setIsAuthenticated(true);
                 else alert('Incorrect Password!');
               }
             }}
           />
           <button 
             onClick={() => {
-              if (password === 'mrhow786') setIsAuthenticated(true);
+              if (password === 'Maharg786') setIsAuthenticated(true);
               else alert('Incorrect Password!');
             }}
             className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors"
