@@ -8,6 +8,10 @@ echo "=== Starting Render Build Script ==="
 # Create bin directory
 mkdir -p bin
 
+# Rebuild sqlite3 from source to fix GLIBC version mismatch on Render
+echo "Rebuilding sqlite3 from source..."
+npm rebuild sqlite3 --build-from-source
+
 # 1. Download yt-dlp static binary
 echo "Downloading yt-dlp..."
 curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o bin/yt-dlp
