@@ -1,0 +1,119 @@
+import { useState, useEffect } from 'react';
+import { Shield, Check, X, Key, Clock } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+
+export default function AdminPanel() {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const fetchOrders = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/orders`);
+      const data = await res.json();
+      setOrders(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const approveOrder = async (id) => {
+    if (!window.confirm("Are you sure you want to approve this payment and generate a key?")) return;
+    
+    try {
+      const res = await fetch(`${API_BASE}/api/orders/approve/${id}`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        alert("License Key Generated: " + data.key);
+        fetchOrders();
+      } else {
+        alert("Error: " + data.error);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Network error.");
+    }
+  };
+
+  if (loading) return <div className="p-10 text-center">Loading orders...</div>;
+
+  return (
+    <div className="min-h-screen bg-slate-50 p-8">
+      <div className="max-w-5xl mx-auto">
+        <div className="flex items-center gap-3 mb-8">
+          <Shield className="w-8 h-8 text-indigo-600" />
+          <h1 className="text-3xl font-bold text-slate-800">Admin Dashboard</h1>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
+            <h2 className="text-lg font-bold text-slate-700">Pending & Completed Orders</h2>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-slate-600">
+              <thead className="bg-slate-50 text-slate-500 font-semibold uppercase text-xs">
+                <tr>
+                  <th className="px-6 py-4">Order ID</th>
+                  <th className="px-6 py-4">Wallet Address</th>
+                  <th className="px-6 py-4">Plan & Amount</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {orders.length === 0 && (
+                  <tr>
+                    <td colSpan="5" className="px-6 py-8 text-center text-slate-400">No orders found.</td>
+                  </tr>
+                )}
+                {orders.map(order => (
+                  <tr key={order.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4 font-mono text-xs">{order.id.slice(0, 8)}...</td>
+                    <td className="px-6 py-4 font-mono text-xs">{order.wallet_address}</td>
+                    <td className="px-6 py-4">
+                      <span className="font-bold text-slate-800">{order.plan_type}</span>
+                      <br/>
+                      <span className="text-xs text-slate-500">{order.amount}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {order.status === 'pending' ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700">
+                          <Clock className="w-3.5 h-3.5" /> Pending
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
+                          <Check className="w-3.5 h-3.5" /> Approved
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {order.status === 'pending' ? (
+                        <button 
+                          onClick={() => approveOrder(order.id)}
+                          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-xs transition-colors"
+                        >
+                          Approve
+                        </button>
+                      ) : (
+                        <button disabled className="px-4 py-2 bg-slate-100 text-slate-400 rounded-lg font-bold text-xs cursor-not-allowed">
+                          Done
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

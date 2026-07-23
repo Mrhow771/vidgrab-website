@@ -1,0 +1,12 @@
+node_modules/
+server/node_modules/
+server/database.sqlite
+server/downloads/
+server/bin/
+dist/
+.env
+.env.local
+.env.production
+.DS_Store
+*.exe
+*.zip
