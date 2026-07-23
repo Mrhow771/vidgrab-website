@@ -2,7 +2,6 @@ services:
   - type: web
     name: vidgrab-backend
     env: node
-    plan: free
     rootDir: server
     buildCommand: npm install && chmod +x render-build.sh && ./render-build.sh
     startCommand: node index.js
@@ -15,7 +14,6 @@ services:
   - type: web
     name: vidgrab-frontend
     env: static
-    plan: free
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     envVars:
