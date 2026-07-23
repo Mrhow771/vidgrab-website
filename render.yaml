@@ -2,6 +2,7 @@ services:
   - type: web
     name: vidgrab-backend
     env: node
+    plan: free
     rootDir: server
     buildCommand: npm install && chmod +x render-build.sh && ./render-build.sh
     startCommand: node index.js
@@ -9,15 +10,12 @@ services:
       - key: PORT
         value: 3000
       - key: DB_PATH
-        value: /opt/database/database.sqlite
-    disk:
-      name: database-disk
-      mountPath: /opt/database
-      sizeGB: 1
+        value: ./database.sqlite
 
   - type: web
     name: vidgrab-frontend
     env: static
+    plan: free
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     envVars:
