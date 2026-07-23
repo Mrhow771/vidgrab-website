@@ -80,13 +80,7 @@ export default function Navbar() {
               href="#"
               onClick={(e) => {
                 e.preventDefault();
-                const link = document.createElement('a');
-                link.href = '/VidGrab_Windows_x64.zip';
-                link.download = 'VidGrab_Windows_x64.zip';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                alert("Downloading VidGrab package for Windows...");
+                window.open('https://drive.google.com/file/d/10S4CT99jITGVPAsmr8_2-sOiKQpobCD3/view?usp=sharing', '_blank');
               }}
               className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-2xl font-bold text-sm shadow-lg shadow-indigo-500/10 hover:shadow-indigo-500/25 transition-all duration-300"
             >
@@ -139,13 +133,7 @@ export default function Navbar() {
             href="#"
             onClick={(e) => {
               e.preventDefault();
-              const link = document.createElement('a');
-              link.href = '/VidGrab_Windows_x64.zip';
-              link.download = 'VidGrab_Windows_x64.zip';
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-              alert("Downloading VidGrab package for Windows...");
+              window.open('https://drive.google.com/file/d/10S4CT99jITGVPAsmr8_2-sOiKQpobCD3/view?usp=sharing', '_blank');
             }}
             className="w-full text-center inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl font-bold text-sm transition-all"
           >
