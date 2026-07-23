@@ -12,9 +12,10 @@ export default function PaymentModal({ isOpen, onClose, plan }) {
   
   const pollIntervalRef = useRef(null);
 
-  if (!isOpen) return null;
+  if (!isOpen || !plan) return null;
 
   const WALLET_ADDRESS = "0x6da9826EBcCd77CBB4eB55cf968F018c54a621b";
+  const amountToPay = plan.priceMonthly || plan.priceAnnual || 0;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(WALLET_ADDRESS);
@@ -38,7 +39,7 @@ export default function PaymentModal({ isOpen, onClose, plan }) {
         body: JSON.stringify({
           wallet_address: WALLET_ADDRESS,
           plan_type: plan.name,
-          amount: plan.price
+          amount: amountToPay
         })
       });
       const data = await res.json();
@@ -97,7 +98,7 @@ export default function PaymentModal({ isOpen, onClose, plan }) {
           {step === 1 && (
             <div className="space-y-6 text-center">
               <div className="bg-indigo-50 text-indigo-700 py-2 px-4 rounded-xl text-sm font-bold inline-block">
-                Amount: {plan.price}
+                Amount: ${amountToPay}
               </div>
 
               <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl flex items-start gap-3 text-left">
