@@ -5,11 +5,16 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
 export default function AdminPanel() {
   const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [password, setPassword] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    if (isAuthenticated) {
+      setLoading(true);
+      fetchOrders();
+    }
+  }, [isAuthenticated]);
 
   const fetchOrders = async () => {
     try {
@@ -41,7 +46,41 @@ export default function AdminPanel() {
     }
   };
 
-  if (loading) return <div className="p-10 text-center">Loading orders...</div>;
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+        <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 max-w-sm w-full text-center">
+          <Key className="w-12 h-12 text-indigo-600 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-slate-800 mb-2">Admin Access</h2>
+          <p className="text-sm text-slate-500 mb-6">Enter master password to continue</p>
+          <input 
+            type="password" 
+            placeholder="Password..." 
+            className="w-full px-4 py-3 border border-slate-200 rounded-xl mb-4 focus:outline-none focus:border-indigo-500 bg-slate-50 text-slate-800 font-medium"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                if (password === 'mrhow786') setIsAuthenticated(true);
+                else alert('Incorrect Password!');
+              }
+            }}
+          />
+          <button 
+            onClick={() => {
+              if (password === 'mrhow786') setIsAuthenticated(true);
+              else alert('Incorrect Password!');
+            }}
+            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors"
+          >
+            Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) return <div className="p-10 text-center text-slate-500 font-medium flex items-center justify-center min-h-screen"><Clock className="w-5 h-5 animate-spin mr-2" /> Loading orders...</div>;
 
   return (
     <div className="min-h-screen bg-slate-50 p-8">
