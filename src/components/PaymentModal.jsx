@@ -12,10 +12,8 @@ export default function PaymentModal({ isOpen, onClose, plan }) {
   
   const pollIntervalRef = useRef(null);
 
-  if (!isOpen || !plan) return null;
-
   const WALLET_ADDRESS = "0x6da9826EBcCd77CBB4eB55cf968F018c54a621b";
-  const amountToPay = plan.priceMonthly || plan.priceAnnual || 0;
+  const amountToPay = plan ? (plan.priceMonthly || plan.priceAnnual || 0) : 0;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(WALLET_ADDRESS);
@@ -83,6 +81,8 @@ export default function PaymentModal({ isOpen, onClose, plan }) {
       }
     };
   }, [step, orderId]);
+
+  if (!isOpen || !plan) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
