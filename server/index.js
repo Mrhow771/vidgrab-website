@@ -357,6 +357,20 @@ app.post('/api/verify-key', (req, res) => {
     });
 });
 
+app.get('/api/latest-version', (req, res) => {
+    const versionPath = path.join(__dirname, 'version.json');
+    if (fs.existsSync(versionPath)) {
+        try {
+            const data = fs.readFileSync(versionPath, 'utf8');
+            res.json(JSON.parse(data));
+        } catch (err) {
+            res.status(500).json({ error: 'Failed to parse version info' });
+        }
+    } else {
+        res.status(404).json({ error: 'Version info not found' });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });
