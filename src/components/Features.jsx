@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { CheckCircle2, ArrowRight, Play, Zap, Shield, Sparkles, Sliders, Smartphone, AlertCircle, Sparkle, Facebook, Twitter } from 'lucide-react';
+import { Check, ArrowRight, Play, Zap, Shield, Sparkles, Sliders, Smartphone, AlertCircle, Sparkle } from 'lucide-react';
 import instaIcon from '../assets/insta_3d.svg';
 import tiktokIcon from '../assets/tiktok_3d.svg';
 import youtubeIcon from '../assets/youtube_3d.svg';
@@ -60,9 +60,9 @@ export default function Features() {
               )}
               <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center">
                 {plat.icon === 'Facebook' ? (
-                  <Facebook className="w-8 h-8 text-blue-600" />
+                  <span className="text-blue-600 font-bold text-xs">FB</span>
                 ) : plat.icon === 'Twitter' ? (
-                  <Twitter className="w-8 h-8 text-slate-800" />
+                  <span className="text-slate-800 font-bold text-xs">X</span>
                 ) : (
                   <img src={plat.icon} alt={plat.name} className="w-8 h-8" />
                 )}
@@ -139,7 +139,7 @@ export default function Features() {
               'Save reels in original quality'
             ].map((feature) => (
               <div key={feature} className="flex items-center gap-2.5 text-sm font-semibold text-slate-700">
-                <CheckCircle2 className="w-5 h-5 text-indigo-600" />
+                <Check className="w-5 h-5 text-indigo-600" />
                 <span>{feature}</span>
               </div>
             ))}
@@ -214,7 +214,7 @@ export default function Features() {
               'Stabilize Video'
             ].map((feature) => (
               <div key={feature} className="flex items-center gap-2.5 text-sm font-semibold text-slate-700">
-                <CheckCircle2 className="w-5 h-5 text-indigo-600" />
+                <Check className="w-5 h-5 text-indigo-600" />
                 <span>{feature}</span>
               </div>
             ))}

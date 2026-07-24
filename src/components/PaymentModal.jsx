@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, CheckCircle, Copy, AlertCircle, Loader2 } from 'lucide-react';
+import { X, Check, Copy, AlertCircle, Loader2 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
@@ -161,7 +161,7 @@ export default function PaymentModal({ isOpen, onClose, plan }) {
           {step === 3 && (
             <div className="text-center py-8 space-y-4">
               <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto text-emerald-500 mb-6">
-                <CheckCircle className="w-10 h-10" />
+                <Check className="w-10 h-10" />
               </div>
               <h3 className="text-2xl font-bold text-slate-800">Payment Approved!</h3>
               <p className="text-slate-600 font-medium">Your license key has been generated. Use this key in the VidGrab app to activate your Pro plan.</p>
