@@ -1,5 +1,5 @@
 {
-  "latest_version": "1.2.8",
+  "latest_version": "1.3.0",
   "download_url": "https://drive.google.com/uc?export=download&id=1G310QUdFxzbbvCmBBajNCJ__ilIiPtUh",
-  "changelog": "Added 'Add Captions Only' mode to Clipping tool, resolved preview locking/freezing on selection updates, expanded Enhancer preview capacity to 15 seconds, and integrated dynamic LUT .cube folder mapping."
+  "changelog": "Added real-time YouTube quality/resolution selection options and dynamic multi-stream audio-video ffmpeg merging capabilities."
 }
