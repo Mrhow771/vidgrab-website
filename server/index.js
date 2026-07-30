@@ -59,57 +59,54 @@ const ytdlpPath = fs.existsSync(path.join(__dirname, 'bin', 'yt-dlp'))
     ? path.join(__dirname, 'bin', 'yt-dlp') 
     : 'yt-dlp';
 
-// Helper to construct cookies and proxy parameters dynamically
-function getYtdlpArgs(url, useProxy = false) {
-    const args = [];
+// Helper to identify video platform
+function getUrlPlatform(url) {
+    const lower = url.toLowerCase();
+    if (lower.includes('youtube.com') || lower.includes('youtu.be')) return 'youtube';
+    if (lower.includes('instagram.com')) return 'instagram';
+    if (lower.includes('tiktok.com')) return 'tiktok';
+    if (lower.includes('xiaohongshu.com') || lower.includes('xhslink.com')) return 'rednote';
+    return 'default';
+}
+
+// Helper to scan for all cookie files for rotation
+function getCookieFiles(platform) {
+    const files = [];
+    if (platform === 'default') return files;
     
-    // 1. Cookies support
-    let cookieFile = '';
-    if (url.includes('youtube.com') || url.includes('youtu.be')) {
-        cookieFile = path.join(__dirname, 'youtube_cookies.txt');
-    } else if (url.includes('instagram.com')) {
-        cookieFile = path.join(__dirname, 'instagram_cookies.txt');
-    } else if (url.includes('tiktok.com')) {
-        cookieFile = path.join(__dirname, 'tiktok_cookies.txt');
-    } else if (url.includes('xiaohongshu.com') || url.includes('xhslink.com')) {
-        cookieFile = path.join(__dirname, 'rednote_cookies.txt');
-    }
-    
-    if (cookieFile && fs.existsSync(cookieFile)) {
-        args.push('--cookies', cookieFile);
-        console.log(`Using cookies file: ${path.basename(cookieFile)}`);
-    }
-    
-    // 2. Proxy support fallback
-    if (useProxy) {
-        let config = {};
-        try {
-            const configPath = path.join(__dirname, 'config.json');
-            if (fs.existsSync(configPath)) {
-                config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    try {
+        const dirFiles = fs.readdirSync(__dirname);
+        dirFiles.forEach(f => {
+            if (f.startsWith(`${platform}_cookies_`) && f.endsWith('.txt')) {
+                files.push(path.join(__dirname, f));
             }
-        } catch (e) {
-            console.error('Error reading config.json', e);
-        }
-        
-        const scraperapiKey = process.env.SCRAPERAPI_KEY || config.scraperapi_key;
-        const crawlbaseToken = process.env.CRAWLBASE_TOKEN || config.crawlbase_token;
-        
-        if (scraperapiKey) {
-            args.push('--proxy', `http://scraperapi:${scraperapiKey}@proxy-server.scraperapi.com:8001`);
-            console.log('Routing yt-dlp through ScraperAPI proxy...');
-        } else if (crawlbaseToken) {
-            args.push('--proxy', `http://${crawlbaseToken}@smartproxy.crawlbase.com:8012`);
-            console.log('Routing yt-dlp through Crawlbase smart proxy...');
-        } else {
-            console.warn('Proxy fallback triggered but no ScraperAPI key or Crawlbase token was configured.');
-        }
+        });
+    } catch (e) {
+        console.error('Error scanning cookies directory:', e);
     }
     
-    // 3. Certificates & timeouts
-    args.push('--no-warnings', '--no-playlist', '--no-check-certificates', '--socket-timeout', '20');
+    files.sort();
     
-    return args;
+    // Fallback to default single cookie file
+    const defaultFile = path.join(__dirname, `${platform}_cookies.txt`);
+    if (files.length === 0 && fs.existsSync(defaultFile)) {
+        files.push(defaultFile);
+    }
+    
+    return files;
+}
+
+// Check if failure is due to cookie block/expiry/rate-limit
+function shouldRotateCookie(stderr) {
+    const lower = stderr.toLowerCase();
+    return lower.includes("sign in") || 
+           lower.includes("confirm you are not a bot") || 
+           lower.includes("rate limit") || 
+           lower.includes("too many requests") || 
+           lower.includes("429") || 
+           lower.includes("login") || 
+           lower.includes("cookie") || 
+           lower.includes("403");
 }
 
 // ==========================================
@@ -123,8 +120,23 @@ app.post('/api/info', (req, res) => {
 
     console.log(`Fetching info for: ${url}`);
     
-    const runInfoQuery = (useProxy) => {
-        const ytdlpArgs = ['-J', ...getYtdlpArgs(url, useProxy), url];
+    const runInfoQuery = (cookieIndex) => {
+        const platform = getUrlPlatform(url);
+        const cookieFiles = getCookieFiles(platform);
+        
+        const ytdlpArgs = ['-J'];
+        
+        let activeCookieFile = '';
+        if (cookieFiles.length > 0 && cookieIndex < cookieFiles.length) {
+            activeCookieFile = cookieFiles[cookieIndex];
+            ytdlpArgs.push('--cookies', activeCookieFile);
+            console.log(`Trying info query with cookie [${cookieIndex + 1}/${cookieFiles.length}]: ${path.basename(activeCookieFile)}`);
+        } else {
+            console.log(`No active cookies configured/left for ${platform}.`);
+        }
+        
+        ytdlpArgs.push('--no-warnings', '--no-playlist', '--no-check-certificates', '--socket-timeout', '15', url);
+        
         const ytdlp = spawn(ytdlpPath, ytdlpArgs);
         
         let stdout = '';
@@ -135,28 +147,19 @@ app.post('/api/info', (req, res) => {
         
         ytdlp.on('close', (code) => {
             if (code !== 0) {
-                console.error(`yt-dlp info err (proxy=${useProxy}): ${stderr}`);
+                console.error(`yt-dlp info err (cookieIndex=${cookieIndex}): ${stderr}`);
                 
-                // If this is the primary run (no proxy) and we failed due to bot block, retry with proxy fallback!
-                if (!useProxy) {
-                    const isBotBlock = stderr.includes("confirm you are not a bot") || stderr.includes("Sign in") || stderr.includes("403");
-                    let config = {};
-                    try {
-                        const configPath = path.join(__dirname, 'config.json');
-                        if (fs.existsSync(configPath)) config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-                    } catch (e) {}
-                    const proxyAvailable = process.env.SCRAPERAPI_KEY || config.scraperapi_key || process.env.CRAWLBASE_TOKEN || config.crawlbase_token;
-                    
-                    if (isBotBlock && proxyAvailable) {
-                        console.log("YouTube bot/rate-limit block detected. Retrying with proxy fallback...");
-                        return runInfoQuery(true);
-                    }
+                // Rotate cookie if failed and next is available
+                if (activeCookieFile && shouldRotateCookie(stderr) && (cookieIndex + 1) < cookieFiles.length) {
+                    console.log(`Cookie failed or rate-limited. Rotating to next cookie account...`);
+                    return runInfoQuery(cookieIndex + 1);
                 }
                 
-                const isBotBlock = stderr.includes("confirm you are not a bot") || stderr.includes("Sign in");
+                // Return clean, informative message
+                const isBotBlock = stderr.includes("confirm you are not a bot") || stderr.includes("Sign in") || stderr.includes("403") || stderr.includes("429");
                 const friendlyErr = isBotBlock 
-                    ? "Failed to fetch video information: YouTube bot detection blocked the request. Please try another URL or configure ScraperAPI key."
-                    : `Failed to fetch video information: ${stderr.trim() || 'It might be private or invalid.'}`;
+                    ? `Failed to fetch video information: Rate-limit or bot detection occurred. Please manually refresh/replace the cookie files (${platform}_cookies.txt or ${platform}_cookies_1.txt) on the server.`
+                    : `Failed to fetch video information: ${stderr.trim() || 'It might be private, restricted, or cookies expired.'}`;
                 return res.status(500).json({ error: friendlyErr });
             }
 
@@ -202,7 +205,7 @@ app.post('/api/info', (req, res) => {
         });
     };
     
-    runInfoQuery(false);
+    runInfoQuery(0);
 });
 
 app.post('/api/download', (req, res) => {
@@ -224,8 +227,21 @@ app.post('/api/download', (req, res) => {
         fmtString = `bestvideo[vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo+bestaudio/best`;
     }
 
-    const runDownloadQuery = (useProxy) => {
-        const ytdlpArgs = ['-f', fmtString, '-g', ...getYtdlpArgs(url, useProxy), url];
+    const runDownloadQuery = (cookieIndex) => {
+        const platform = getUrlPlatform(url);
+        const cookieFiles = getCookieFiles(platform);
+        
+        const ytdlpArgs = ['-f', fmtString, '-g'];
+        
+        let activeCookieFile = '';
+        if (cookieFiles.length > 0 && cookieIndex < cookieFiles.length) {
+            activeCookieFile = cookieFiles[cookieIndex];
+            ytdlpArgs.push('--cookies', activeCookieFile);
+            console.log(`Trying download query with cookie [${cookieIndex + 1}/${cookieFiles.length}]: ${path.basename(activeCookieFile)}`);
+        }
+        
+        ytdlpArgs.push('--no-warnings', '--no-playlist', '--no-check-certificates', '--socket-timeout', '15', url);
+        
         const ytdlp = spawn(ytdlpPath, ytdlpArgs);
 
         let stdout = '';
@@ -236,28 +252,20 @@ app.post('/api/download', (req, res) => {
 
         ytdlp.on('close', (code) => {
             if (code !== 0) {
-                console.error(`yt-dlp direct URL err (proxy=${useProxy}): ${stderr}`);
+                console.error(`yt-dlp direct URL err (cookieIndex=${cookieIndex}): ${stderr}`);
                 
-                // Fallback 1: Try with proxy if not used yet and rate-limited
-                if (!useProxy) {
-                    const isBotBlock = stderr.includes("confirm you are not a bot") || stderr.includes("Sign in") || stderr.includes("403");
-                    let config = {};
-                    try {
-                        const configPath = path.join(__dirname, 'config.json');
-                        if (fs.existsSync(configPath)) config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-                    } catch (e) {}
-                    const proxyAvailable = process.env.SCRAPERAPI_KEY || config.scraperapi_key || process.env.CRAWLBASE_TOKEN || config.crawlbase_token;
-                    
-                    if (isBotBlock && proxyAvailable) {
-                        console.log("Fallback to proxy for download query...");
-                        return runDownloadQuery(true);
-                    }
+                // Try next cookie in pool if failed
+                if (activeCookieFile && shouldRotateCookie(stderr) && (cookieIndex + 1) < cookieFiles.length) {
+                    console.log(`Cookie failed. Rotating to next cookie account...`);
+                    return runDownloadQuery(cookieIndex + 1);
                 }
                 
-                // Fallback 2: try with simple 'best' format
-                const fallbackArgs = ['-f', 'best', '-g', ...getYtdlpArgs(url, useProxy), url];
-                const fallback = spawn(ytdlpPath, fallbackArgs);
+                // Fallback to simple 'best' format
+                const fallbackArgs = ['-f', 'best', '-g'];
+                if (activeCookieFile) fallbackArgs.push('--cookies', activeCookieFile);
+                fallbackArgs.push('--no-warnings', '--no-playlist', '--no-check-certificates', url);
                 
+                const fallback = spawn(ytdlpPath, fallbackArgs);
                 let fbOut = '';
                 let fbErr = '';
                 fallback.stdout.on('data', (d) => { fbOut += d.toString(); });
@@ -269,7 +277,7 @@ app.post('/api/download', (req, res) => {
                         return res.json({ directUrl });
                     }
                     console.error(`Fallback also failed: ${fbErr}`);
-                    return res.status(500).json({ error: 'Failed to get download link. The video might be private or restricted.' });
+                    return res.status(500).json({ error: 'Failed to get download link. The video cookies might be expired or restricted.' });
                 });
                 return;
             }
@@ -280,24 +288,21 @@ app.post('/api/download', (req, res) => {
                 return res.status(500).json({ error: 'Could not extract download link.' });
             }
 
-            // If we got 1 URL, send it directly
+            // Single stream format
             if (urls.length === 1) {
                 console.log(`Direct URL obtained (single stream).`);
                 return res.json({ directUrl: urls[0] });
             }
 
-            // Multiple URLs means video+audio separate - merge needed on server
-            console.log(`Got ${urls.length} streams, downloading and merging on server (proxy=${useProxy})...`);
+            // Multiple streams (video + audio separately) - merge needed
+            console.log(`Got ${urls.length} streams, downloading and merging on server (cookieIndex=${cookieIndex})...`);
             const filename = `video_${Date.now()}.mp4`;
             const filepath = path.join(DOWNLOADS_DIR, filename);
             
-            const mergeArgs = [
-                '-f', fmtString,
-                '--merge-output-format', 'mp4',
-                ...getYtdlpArgs(url, useProxy),
-                '-o', filepath,
-                url
-            ];
+            const mergeArgs = ['-f', fmtString, '--merge-output-format', 'mp4'];
+            if (activeCookieFile) mergeArgs.push('--cookies', activeCookieFile);
+            mergeArgs.push('--no-warnings', '--no-playlist', '--no-check-certificates', '-o', filepath, url);
+            
             const mergeProc = spawn(ytdlpPath, mergeArgs);
 
             mergeProc.stderr.on('data', (data) => {
@@ -312,8 +317,10 @@ app.post('/api/download', (req, res) => {
                         try { fs.unlinkSync(filepath); } catch (e) {}
                     });
                 } else {
-                    // Final fallback: just download 'best' single stream
-                    const fb2Args = ['-f', 'best', '-g', ...getYtdlpArgs(url, useProxy), url];
+                    const fb2Args = ['-f', 'best', '-g'];
+                    if (activeCookieFile) fb2Args.push('--cookies', activeCookieFile);
+                    fb2Args.push('--no-warnings', '--no-playlist', url);
+                    
                     const fb2 = spawn(ytdlpPath, fb2Args);
                     let fb2Out = '';
                     fb2.stdout.on('data', (d) => { fb2Out += d.toString(); });
@@ -328,7 +335,7 @@ app.post('/api/download', (req, res) => {
         });
     };
 
-    runDownloadQuery(false);
+    runDownloadQuery(0);
 });
 
 // ==========================================
