@@ -55,6 +55,10 @@ const db = new sqlite3.Database(dbPath, (err) => {
     }
 });
 
+const ytdlpPath = fs.existsSync(path.join(__dirname, 'bin', 'yt-dlp')) 
+    ? path.join(__dirname, 'bin', 'yt-dlp') 
+    : 'yt-dlp';
+
 // ==========================================
 // FEATURE 1: VIDEO DOWNLOADER
 // ==========================================
@@ -64,14 +68,14 @@ app.post('/api/info', (req, res) => {
         return res.status(400).json({ error: 'URL is required' });
     }
 
-    console.log(`Fetching info for: ${url}`);
+    console.log(`Fetching info for: ${url} using binary: ${ytdlpPath}`);
     
-    const ytdlp = spawn('yt-dlp', [
+    const ytdlp = spawn(ytdlpPath, [
         '-J',
         '--no-warnings',
         '--no-playlist',
         '--no-check-certificates',
-        '--socket-timeout', '10',
+        '--socket-timeout', '15',
         url
     ]);
     let stdout = '';
@@ -88,7 +92,12 @@ app.post('/api/info', (req, res) => {
     ytdlp.on('close', (code) => {
         if (code !== 0) {
             console.error(`yt-dlp info err: ${stderr}`);
-            return res.status(500).json({ error: 'Failed to fetch video information. It might be private or invalid.' });
+            // Check if blocked by YouTube
+            const isBotBlock = stderr.includes("confirm you are not a bot") || stderr.includes("Sign in");
+            const friendlyErr = isBotBlock 
+                ? "Failed to fetch video information: YouTube bot detection blocked the request. Please try another URL or platform."
+                : `Failed to fetch video information: ${stderr.trim() || 'It might be private or invalid.'}`;
+            return res.status(500).json({ error: friendlyErr });
         }
 
         try {
@@ -156,7 +165,7 @@ app.post('/api/download', (req, res) => {
     }
 
     // First try to get a direct URL (works for single-stream formats)
-    const ytdlp = spawn('yt-dlp', [
+    const ytdlp = spawn(ytdlpPath, [
         '-f', fmtString,
         '-g',
         '--no-warnings',
@@ -181,7 +190,7 @@ app.post('/api/download', (req, res) => {
         if (code !== 0) {
             console.error(`yt-dlp direct URL err: ${stderr}`);
             // Fallback: try with simple 'best' format (single stream, no merge needed)
-            const fallback = spawn('yt-dlp', [
+            const fallback = spawn(ytdlpPath, [
                 '-f', 'best',
                 '-g',
                 '--no-warnings',
