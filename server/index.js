@@ -423,15 +423,34 @@ app.post('/api/verify-key', (req, res) => {
             return res.json({ valid: false, message: 'License Key is not active' });
         }
 
-        // Simple device lock simulation (if device_id is provided and key is unused)
+        // Device lock logic
         if (!row.device_id && device_id) {
             db.run(`UPDATE keys SET device_id = ? WHERE key = ?`, [device_id, key]);
             return res.json({ valid: true, plan: row.plan_type, message: 'Key bound to device and activated.' });
         } else if (row.device_id && row.device_id !== device_id) {
-            return res.json({ valid: false, message: 'Key is already bound to another device.' });
+            return res.json({ 
+                valid: false, 
+                reason: "already_activated_elsewhere", 
+                message: "This license key is already activated on another device. Please contact support if you believe this is an error." 
+            });
         }
 
         res.json({ valid: true, plan: row.plan_type, message: 'Premium Activated' });
+    });
+});
+
+app.get('/api/keys', (req, res) => {
+    db.all(`SELECT * FROM keys ORDER BY created_at DESC`, [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+app.post('/api/keys/reset/:key', (req, res) => {
+    const key = req.params.key;
+    db.run(`UPDATE keys SET device_id = NULL WHERE key = ?`, [key], function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true, message: `Device binding for key ${key} has been reset.` });
     });
 });
 

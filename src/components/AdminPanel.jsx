@@ -5,6 +5,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
 export default function AdminPanel() {
   const [orders, setOrders] = useState([]);
+  const [keys, setKeys] = useState([]);
   const [loading, setLoading] = useState(false);
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -13,6 +14,7 @@ export default function AdminPanel() {
     if (isAuthenticated) {
       setLoading(true);
       fetchOrders();
+      fetchKeys();
     }
   }, [isAuthenticated]);
 
@@ -28,6 +30,16 @@ export default function AdminPanel() {
     }
   };
 
+  const fetchKeys = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/keys`);
+      const data = await res.json();
+      setKeys(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const approveOrder = async (id) => {
     if (!window.confirm("Are you sure you want to approve this payment and generate a key?")) return;
     
@@ -37,6 +49,25 @@ export default function AdminPanel() {
       if (data.success) {
         alert("License Key Generated: " + data.key);
         fetchOrders();
+        fetchKeys();
+      } else {
+        alert("Error: " + data.error);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Network error.");
+    }
+  };
+
+  const resetKeyDevice = async (key) => {
+    if (!window.confirm(`Are you sure you want to reset the device binding for key: ${key}?`)) return;
+    
+    try {
+      const res = await fetch(`${API_BASE}/api/keys/reset/${key}`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        alert("Device binding reset successfully!");
+        fetchKeys();
       } else {
         alert("Error: " + data.error);
       }
@@ -143,6 +174,63 @@ export default function AdminPanel() {
                       ) : (
                         <button disabled className="px-4 py-2 bg-slate-100 text-slate-400 rounded-lg font-bold text-xs cursor-not-allowed">
                           Done
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Keys Table Card */}
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200 mt-10">
+          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
+            <Key className="w-5 h-5 text-indigo-600" />
+            <h2 className="text-lg font-bold text-slate-700">License Keys Management</h2>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-slate-600">
+              <thead className="bg-slate-50 text-slate-500 font-semibold uppercase text-xs">
+                <tr>
+                  <th className="px-6 py-4">License Key</th>
+                  <th className="px-6 py-4">Plan</th>
+                  <th className="px-6 py-4">Bound Device ID</th>
+                  <th className="px-6 py-4">Created At</th>
+                  <th className="px-6 py-4">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {keys.length === 0 && (
+                  <tr>
+                    <td colSpan="5" className="px-6 py-8 text-center text-slate-400">No keys found.</td>
+                  </tr>
+                )}
+                {keys.map(k => (
+                  <tr key={k.key} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4 font-mono font-bold text-indigo-600">{k.key}</td>
+                    <td className="px-6 py-4 font-bold text-slate-800 uppercase text-xs">{k.plan_type}</td>
+                    <td className="px-6 py-4 font-mono text-xs">
+                      {k.device_id ? (
+                        <span className="text-slate-700 bg-slate-100 px-2 py-1 rounded" title={k.device_id}>{k.device_id.slice(0, 16)}...</span>
+                      ) : (
+                        <span className="text-slate-400 italic">Unbound (Available)</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-xs text-slate-500">{new Date(k.created_at).toLocaleString()}</td>
+                    <td className="px-6 py-4">
+                      {k.device_id ? (
+                        <button 
+                          onClick={() => resetKeyDevice(k.key)}
+                          className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-lg font-bold text-xs transition-colors"
+                        >
+                          Reset Device
+                        </button>
+                      ) : (
+                        <button disabled className="px-3 py-1.5 bg-slate-50 text-slate-350 border border-slate-150 rounded-lg font-bold text-xs cursor-not-allowed">
+                          Reset Device
                         </button>
                       )}
                     </td>
