@@ -24,6 +24,7 @@ const DOWNLOADS_DIR = path.join(__dirname, 'downloads');
 if (!fs.existsSync(DOWNLOADS_DIR)) {
     fs.mkdirSync(DOWNLOADS_DIR);
 }
+app.use('/downloads', express.static(DOWNLOADS_DIR));
 
 // Database Setup
 const dbPath = process.env.DB_PATH || path.join(__dirname, 'database.sqlite');
