@@ -5,6 +5,19 @@ import { Menu, X, Sun, Moon, ArrowDownToLine } from 'lucide-react';
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [downloadUrl, setDownloadUrl] = useState('https://drive.google.com/file/d/1G310QUdFxzbbvCmBBajNCJ__ilIiPtUh/view?usp=sharing');
+
+  useEffect(() => {
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+    fetch(`${API_BASE}/api/latest-version`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.download_url) {
+          setDownloadUrl(data.download_url);
+        }
+      })
+      .catch(err => console.error("Failed to load latest version url:", err));
+  }, []);
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -80,7 +93,7 @@ export default function Navbar() {
               href="#"
               onClick={(e) => {
                 e.preventDefault();
-                window.open('https://drive.google.com/file/d/1G310QUdFxzbbvCmBBajNCJ__ilIiPtUh/view?usp=sharing', '_blank');
+                window.open(downloadUrl, '_blank');
               }}
               className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-2xl font-bold text-sm shadow-lg shadow-indigo-500/10 hover:shadow-indigo-500/25 transition-all duration-300"
             >
@@ -133,7 +146,7 @@ export default function Navbar() {
             href="#"
             onClick={(e) => {
               e.preventDefault();
-              window.open('https://drive.google.com/file/d/1G310QUdFxzbbvCmBBajNCJ__ilIiPtUh/view?usp=sharing', '_blank');
+              window.open(downloadUrl, '_blank');
             }}
             className="w-full text-center inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl font-bold text-sm transition-all"
           >
